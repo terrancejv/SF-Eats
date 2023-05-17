@@ -133,7 +133,7 @@ const App = () => {
       >
         <p className='page-title'>Food Truck Finder (San Francisco, California)</p>
         <div class="search-bar">
-          <input type="text" placeholder="Search for name, food genre, facility type..." value={searchTerm} onChange={handleSearch}/>
+          <input type="text" placeholder="i.e. name, genre, type..." value={searchTerm} onChange={handleSearch}/>
           <button className="show-all-button" onClick={handleButtonToggle}>Show All</button> {/* Button to show/hide markers */}
         </div>
         {searchTerm && (
