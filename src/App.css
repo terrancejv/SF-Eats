@@ -30,10 +30,10 @@
 }
 
 .search-bar {
-  display: flex;
-  align-items: center;
+  display: inline-flex;
   position: relative;
-  top: 10%
+  top: 10%;
+  left: 2.5%
 }
 
 .search-bar input {
@@ -43,9 +43,7 @@
   border-radius: 4px 0px 0px 4px;
   outline: none;
   margin-right: 0px;
-  position: absolute;
-  top: 10%;
-  left: 2.5%;
+  flex: 1;
 }
 
 .show-all-button {
@@ -56,11 +54,9 @@
   background-color: #007bff;
   color: #fff;
   cursor: pointer;
-  position: absolute;
-  top: 10%;
-  left: 23.7%;
   z-index: 1;
   transition: background-color 0.1s ease;
+  flex: 1;
 }
 
 .show-all-button:hover {
