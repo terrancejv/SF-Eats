@@ -124,7 +124,7 @@ const App = () => {
     <div style={{ width: "100vw", height: "100vh"}}>
       <ReactMapGL
         {...viewport}
-        mapboxAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+        mapboxAccessToken='pk.eyJ1IjoidGVycmFuY2VqdiIsImEiOiJjbGhxczJiM2MyaWhjM2Vxa3hjMHF1bWZ2In0.BDXH4CwbZ5gf9AzQHx8PeA'
         width="100%"
         height="100%"
         transitionDuration="200"
