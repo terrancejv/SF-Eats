@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/foodtruck-finder/static/css/main.12c56a5e.css",
+    "main.js": "/foodtruck-finder/static/js/main.f0d2b3cc.js",
+    "static/js/483.f238c507.chunk.js": "/foodtruck-finder/static/js/483.f238c507.chunk.js",
+    "static/js/787.28cb0dcd.chunk.js": "/foodtruck-finder/static/js/787.28cb0dcd.chunk.js",
+    "index.html": "/foodtruck-finder/index.html",
+    "main.12c56a5e.css.map": "/foodtruck-finder/static/css/main.12c56a5e.css.map",
+    "main.f0d2b3cc.js.map": "/foodtruck-finder/static/js/main.f0d2b3cc.js.map",
+    "483.f238c507.chunk.js.map": "/foodtruck-finder/static/js/483.f238c507.chunk.js.map",
+    "787.28cb0dcd.chunk.js.map": "/foodtruck-finder/static/js/787.28cb0dcd.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.12c56a5e.css",
+    "static/js/main.f0d2b3cc.js"
+  ]
+}
