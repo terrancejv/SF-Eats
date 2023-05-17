@@ -3,6 +3,9 @@ import ReactMapGL, { Marker, Popup } from 'react-map-gl';
 import './App.css';
 import { GiPositionMarker } from 'react-icons/gi';
 import "mapbox-gl/dist/mapbox-gl.css"
+import mapboxgl from 'mapbox-gl';
+// eslint-disable-next-line import/no-webpack-loader-syntax
+mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worker').default;
 
 const App = () => {
   const [viewport, setViewport] = useState({
@@ -124,6 +127,7 @@ const App = () => {
     <div style={{ width: "100vw", height: "100vh"}}>
       <ReactMapGL
         {...viewport}
+        /* Added URL restrictions so no need to do process.env.REACT_APP_MAP_TOKEN */
         mapboxAccessToken='pk.eyJ1IjoidGVycmFuY2VqdiIsImEiOiJjbGhxczJiM2MyaWhjM2Vxa3hjMHF1bWZ2In0.BDXH4CwbZ5gf9AzQHx8PeA'
         width="100%"
         height="100%"
