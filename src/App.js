@@ -2,10 +2,34 @@ import React, { useState, useEffect } from 'react';
 import ReactMapGL, { Marker, Popup } from 'react-map-gl';
 import './App.css';
 import { GiPositionMarker } from 'react-icons/gi';
+import { TbCircleFilled } from 'react-icons/tb';
 import "mapbox-gl/dist/mapbox-gl.css"
 import mapboxgl from 'mapbox-gl';
 // eslint-disable-next-line import/no-webpack-loader-syntax
 mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worker').default;
+
+// Calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const earthRadius = 6371; // Radius of the Earth in kilometers
+
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = earthRadius * c;
+
+  return distance;
+}
+
+// Convert degrees to radians
+function toRadians(degrees) {
+  return degrees * (Math.PI / 180);
+}
 
 const App = () => {
   const [viewport, setViewport] = useState({
@@ -20,6 +44,10 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isEmptyResults, setIsEmptyResults] = useState('');
+  const [userLatitude, setUserLatitude] = useState(0);
+  const [userLongitude, setUserLongitude] = useState(0);
+  const [addressInput, setAddressInput] = useState('');
+  const [searchRadius, setSearchRadius] = useState(1);
 
   let delayTimer;
 
@@ -100,7 +128,74 @@ const App = () => {
       }
     }, 0);
   };
-  
+
+  const handleFormSubmit = (event) => {
+    event.preventDefault();
+
+    clearTimeout(delayTimer);
+
+    delayTimer = setTimeout(() => {
+      // Code to be executed after 0 seconds
+      const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        addressInput
+      )}&key=AIzaSyDPor6dzCNbVv_2JHxh4WjWHSmpAfb8Pw8`;
+
+      fetch(geocodingUrl)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === 'OK' && data.results.length > 0) {
+            const latitude = data.results[0].geometry.location.lat;
+            const longitude = data.results[0].geometry.location.lng;
+            setUserLatitude(latitude);
+            setUserLongitude(longitude);
+
+            if (isCoordinateInSanFrancisco(parseFloat(latitude), parseFloat(longitude)))
+            {
+              fetch(
+              'https://data.sfgov.org/resource/rqzj-sfat.json?$query=SELECT%0A%20%20%60objectid%60%2C%0A%20%20%60applicant%60%2C%0A%20%20%60facilitytype%60%2C%0A%20%20%60cnn%60%2C%0A%20%20%60locationdescription%60%2C%0A%20%20%60address%60%2C%0A%20%20%60blocklot%60%2C%0A%20%20%60block%60%2C%0A%20%20%60lot%60%2C%0A%20%20%60permit%60%2C%0A%20%20%60status%60%2C%0A%20%20%60fooditems%60%2C%0A%20%20%60x%60%2C%0A%20%20%60y%60%2C%0A%20%20%60latitude%60%2C%0A%20%20%60longitude%60%2C%0A%20%20%60schedule%60%2C%0A%20%20%60dayshours%60%2C%0A%20%20%60noisent%60%2C%0A%20%20%60approved%60%2C%0A%20%20%60received%60%2C%0A%20%20%60priorpermit%60%2C%0A%20%20%60expirationdate%60%2C%0A%20%20%60location%60%2C%0A%20%20%60%3A%40computed_region_yftq_j783%60%2C%0A%20%20%60%3A%40computed_region_p5aj_wyqh%60%2C%0A%20%20%60%3A%40computed_region_rxqg_mtj9%60%2C%0A%20%20%60%3A%40computed_region_bh8s_q3mv%60%2C%0A%20%20%60%3A%40computed_region_fyvs_ahh9%60'
+              )
+                .then((response) => response.json())
+                .then((data) => {
+                  const distanceThreshold = searchRadius; // Consider food trucks within searchRadius
+                  const closeFoodTrucks = data
+                    .map((foodTruck) => {
+                      const distance = calculateDistance(
+                        userLatitude,
+                        userLongitude,
+                        foodTruck.latitude,
+                        foodTruck.longitude
+                      );
+                      const distanceInMiles = distance * 0.62137119;
+                      return { ...foodTruck, distance: distanceInMiles };
+                    })
+                    .filter((foodTruck) => foodTruck.distance <= distanceThreshold);
+
+                  closeFoodTrucks.sort((a, b) => a.distance - b.distance);
+
+                  if (closeFoodTrucks.length > 0) {
+                    setSearchResults(closeFoodTrucks);
+                    setIsEmptyResults(false);
+                  } else {
+                    setSearchResults([]);
+                    setIsEmptyResults(true);
+                  }
+                })
+                .catch((error) => {
+                  console.error('Error:', error);
+                });
+            } else {
+              setSearchResults([]);
+              setIsEmptyResults(true);
+            }
+          } else {
+            console.error('Geocoding request failed');
+          }
+        })
+      .catch((error) => {
+        console.error('Error occurred while geocoding:', error);
+      });
+    }, 100);
+  };
   
   const handleMarkerClick = (foodTruck) => {
     if (foodTruck) {
@@ -123,6 +218,11 @@ const App = () => {
     }
   };
 
+  const handleSearchRadius = (event) => {
+    const newValue = parseInt(event.target.value);
+    setSearchRadius(newValue);
+  };
+
   return (
     <div style={{ width: "100vw", height: "100vh"}}>
       <ReactMapGL
@@ -136,18 +236,37 @@ const App = () => {
         onMove={evt => setViewport(evt.viewport)}
       >
         <p className='page-title'>Food Truck Finder (San Francisco, California)</p>
-        <div class="search-bar">
+        <div className="search-bar">
           <input type="text" placeholder="i.e. name, genre, type..." value={searchTerm} onChange={handleSearch}/>
+          <button className="search-button" onClick={handleFormSubmit}>Search</button> {/* Button to search */}
           <button className="show-all-button" onClick={handleButtonToggle}>Show All</button> {/* Button to show/hide markers */}
         </div>
-        {searchTerm && (
+        <form className='search-address-bar' onSubmit={handleFormSubmit}>
+          <input type="text" placeholder="Enter an address..." value={addressInput} onChange={(e) => setAddressInput(e.target.value)}/>
+        </form>
+        <input
+            className='slider'
+            type="range"
+            min={1}
+            max={10}
+            step={0.1}
+            value={searchRadius}
+            onChange={handleSearchRadius}
+        />
+        <p className="miles-text" >within {searchRadius} mile(s)</p>
+
+        {(addressInput || searchTerm) && (
           <div className="search-results">
             {isEmptyResults && <p>No Results</p>}
             {foodTrucks.length > 0 &&
               searchResults.map((foodTruck, index) => (
                 <div key={foodTruck.objectid} className="foodtruck-item">
                   <div className='foodtruck-details'>
-                    <h3 className='applicant'>{`${index + 1}. ${foodTruck.applicant}`}</h3>
+                    <h3 className='applicant'>
+                      {`${index + 1}. ${foodTruck.applicant}`} 
+                      {foodTruck.distance ? ' (' + foodTruck.distance.toFixed(2) + ' miles away)' : ''}
+                      
+                    </h3>
                     <p className='address'>{foodTruck.address}</p>
                 </div>
                 <button
@@ -177,6 +296,13 @@ const App = () => {
               </button>
             </Marker>
         ))}
+
+        <Marker
+              latitude={parseFloat(userLatitude)}
+              longitude={parseFloat(userLongitude)}
+        >
+          <TbCircleFilled className="current-location-icon"/>
+        </Marker>
 
         {selectedFoodTruck && (
           <Popup

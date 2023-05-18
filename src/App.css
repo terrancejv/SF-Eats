@@ -4,6 +4,8 @@
   top: 0;
   left: 2.5%;
   color: white;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .marker-btn, 
@@ -29,10 +31,19 @@
   filter: invert(60%) sepia(100%) saturate(7414%) hue-rotate(359deg) brightness(94%) contrast(117%);
 }
 
+.current-location-icon {
+  filter: invert(7.5%) sepia(100%) saturate(7414%) hue-rotate(270deg) brightness(94%) contrast(117%);
+  scale: 2.5;
+}
+
+.current-location-icon:hover {
+  filter: invert(10%) sepia(100%) saturate(7414%) hue-rotate(270deg) brightness(94%) contrast(117%);
+}
+
 .search-bar {
   display: inline-flex;
   position: relative;
-  top: 10%;
+  top: 5.5%;
   left: 2.5%
 }
 
@@ -40,17 +51,18 @@
   padding: 8px;
   font-size: 14px;
   border: none;
-  border-radius: 4px 0px 0px 4px;
+  border-radius: 4px;
   outline: none;
-  margin-right: 0px;
+  margin-right: 10px;
   flex: 1;
 }
 
 .show-all-button {
   padding: 8px;
   font-size: 14px;
+  margin-left: 10px;
   border: none;
-  border-radius: 0px 4px 4px 0px;
+  border-radius: 4px;
   background-color: #007bff;
   color: #fff;
   cursor: pointer;
@@ -71,13 +83,68 @@
   opacity: 90%;
 }
 
+.search-button {
+  padding: 8px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  z-index: 1;
+  transition: background-color 0.1s ease;
+}
+
+.search-button:hover {
+  background-color: #0056b3;
+}
+
+.search-button:focus {
+  outline: none;
+}
+
+.search-button:active {
+  opacity: 90%;
+}
+
+.search-address-bar {
+  position: absolute;
+  top: 12%;
+  left: 2.5%
+}
+
+.search-address-bar input {
+  padding: 8px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  margin-right: 0px;
+}
+
+.slider {
+  position: absolute;
+  top: 14.3%;
+  left: 15.3%;
+}
+
+.miles-text {
+  position: absolute;
+  color: white;
+  font-size: 16px;
+  top: 9.5%;
+  left: 16.1%;
+  width: 100%;
+}
+
+
 .search-results {
   position: absolute;
   padding-left: 10px;
   z-index: 1;
   width: 28.2%;
   height: 70%;
-  top: 18%;
+  top: 20%;
   left: 2.5%;
   background-color: white;
   overflow: auto;
@@ -118,3 +185,4 @@
   transform: translateY(1px);
   opacity: 90%;
 }
+
