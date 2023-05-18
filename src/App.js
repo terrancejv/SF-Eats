@@ -31,6 +31,23 @@ function toRadians(degrees) {
   return degrees * (Math.PI / 180);
 }
 
+function filterFoodTrucks(foodTrucks, searchTerm, searchRadius) {
+  return foodTrucks.filter((foodTruck) => {
+    const applicant = foodTruck.applicant || '';
+    const fooditems = foodTruck.fooditems || '';
+    const facilitytype = foodTruck.facilitytype || '';
+    const status = foodTruck.status || '';
+    const distance = foodTruck.distance || '';
+    return (
+      applicant.toLowerCase().includes(searchTerm) ||
+      fooditems.toLowerCase().includes(searchTerm) ||
+      facilitytype.toLowerCase().includes(searchTerm) ||
+      status.toLowerCase().includes(searchTerm) ||
+      distance <= searchRadius
+    );
+  });
+}
+
 const App = () => {
   const [viewport, setViewport] = useState({
     latitude: 37.7749,
@@ -47,7 +64,7 @@ const App = () => {
   const [userLatitude, setUserLatitude] = useState(0);
   const [userLongitude, setUserLongitude] = useState(0);
   const [addressInput, setAddressInput] = useState('');
-  const [searchRadius, setSearchRadius] = useState(1);
+  const [searchRadius, setSearchRadius] = useState(10);
 
   let delayTimer;
 
@@ -107,18 +124,7 @@ const App = () => {
     delayTimer = setTimeout(() => {
       // Code to be executed after 0 seconds
       const searchTerm = event.target.value.toLowerCase();
-      const filteredFoodTrucks = foodTrucks.filter((foodTruck) => {
-        const applicant = foodTruck.applicant || '';
-        const fooditems = foodTruck.fooditems || '';
-        const facilitytype = foodTruck.facilitytype || '';
-        const status = foodTruck.status || '';
-        return (
-          applicant.toLowerCase().includes(searchTerm) ||
-          fooditems.toLowerCase().includes(searchTerm) ||
-          facilitytype.toLowerCase().includes(searchTerm) ||
-          status.toLowerCase().includes(searchTerm)
-        );
-      });
+      const filteredFoodTrucks = filterFoodTrucks(foodTrucks, searchTerm, searchRadius);
       if (filteredFoodTrucks.length === 0) {
         setSearchResults([]);
         setIsEmptyResults(true);
@@ -126,75 +132,70 @@ const App = () => {
         setSearchResults(filteredFoodTrucks);
         setIsEmptyResults(false);
       }
-    }, 0);
+    }, 500);
   };
 
   const handleFormSubmit = (event) => {
     event.preventDefault();
+    const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      addressInput
+    )}&key=AIzaSyDPor6dzCNbVv_2JHxh4WjWHSmpAfb8Pw8`;
 
-    clearTimeout(delayTimer);
+    fetch(geocodingUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === 'OK' && data.results.length > 0) {
+          const latitude = data.results[0].geometry.location.lat;
+          const longitude = data.results[0].geometry.location.lng;
+          setUserLatitude(latitude);
+          setUserLongitude(longitude);
 
-    delayTimer = setTimeout(() => {
-      // Code to be executed after 0 seconds
-      const geocodingUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        addressInput
-      )}&key=AIzaSyDPor6dzCNbVv_2JHxh4WjWHSmpAfb8Pw8`;
+          if (isCoordinateInSanFrancisco(parseFloat(latitude), parseFloat(longitude)))
+          {
+            fetch(
+            'https://data.sfgov.org/resource/rqzj-sfat.json?$query=SELECT%0A%20%20%60objectid%60%2C%0A%20%20%60applicant%60%2C%0A%20%20%60facilitytype%60%2C%0A%20%20%60cnn%60%2C%0A%20%20%60locationdescription%60%2C%0A%20%20%60address%60%2C%0A%20%20%60blocklot%60%2C%0A%20%20%60block%60%2C%0A%20%20%60lot%60%2C%0A%20%20%60permit%60%2C%0A%20%20%60status%60%2C%0A%20%20%60fooditems%60%2C%0A%20%20%60x%60%2C%0A%20%20%60y%60%2C%0A%20%20%60latitude%60%2C%0A%20%20%60longitude%60%2C%0A%20%20%60schedule%60%2C%0A%20%20%60dayshours%60%2C%0A%20%20%60noisent%60%2C%0A%20%20%60approved%60%2C%0A%20%20%60received%60%2C%0A%20%20%60priorpermit%60%2C%0A%20%20%60expirationdate%60%2C%0A%20%20%60location%60%2C%0A%20%20%60%3A%40computed_region_yftq_j783%60%2C%0A%20%20%60%3A%40computed_region_p5aj_wyqh%60%2C%0A%20%20%60%3A%40computed_region_rxqg_mtj9%60%2C%0A%20%20%60%3A%40computed_region_bh8s_q3mv%60%2C%0A%20%20%60%3A%40computed_region_fyvs_ahh9%60'
+            )
+              .then((response) => response.json())
+              .then((data) => {
+                const distanceThreshold = searchRadius; // Consider food trucks within searchRadius
+                const filteredFoodTrucks = filterFoodTrucks(data, searchTerm);
+                const closeFoodTrucks = filteredFoodTrucks
+                  .map((foodTruck) => {
+                    const distance = calculateDistance(
+                      userLatitude,
+                      userLongitude,
+                      foodTruck.latitude,
+                      foodTruck.longitude
+                    );
+                    const distanceInMiles = distance * 0.62137119;
+                    return { ...foodTruck, distance: distanceInMiles };
+                  })
+                  .filter((foodTruck) => foodTruck.distance <= distanceThreshold);
 
-      fetch(geocodingUrl)
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.status === 'OK' && data.results.length > 0) {
-            const latitude = data.results[0].geometry.location.lat;
-            const longitude = data.results[0].geometry.location.lng;
-            setUserLatitude(latitude);
-            setUserLongitude(longitude);
+                closeFoodTrucks.sort((a, b) => a.distance - b.distance);
 
-            if (isCoordinateInSanFrancisco(parseFloat(latitude), parseFloat(longitude)))
-            {
-              fetch(
-              'https://data.sfgov.org/resource/rqzj-sfat.json?$query=SELECT%0A%20%20%60objectid%60%2C%0A%20%20%60applicant%60%2C%0A%20%20%60facilitytype%60%2C%0A%20%20%60cnn%60%2C%0A%20%20%60locationdescription%60%2C%0A%20%20%60address%60%2C%0A%20%20%60blocklot%60%2C%0A%20%20%60block%60%2C%0A%20%20%60lot%60%2C%0A%20%20%60permit%60%2C%0A%20%20%60status%60%2C%0A%20%20%60fooditems%60%2C%0A%20%20%60x%60%2C%0A%20%20%60y%60%2C%0A%20%20%60latitude%60%2C%0A%20%20%60longitude%60%2C%0A%20%20%60schedule%60%2C%0A%20%20%60dayshours%60%2C%0A%20%20%60noisent%60%2C%0A%20%20%60approved%60%2C%0A%20%20%60received%60%2C%0A%20%20%60priorpermit%60%2C%0A%20%20%60expirationdate%60%2C%0A%20%20%60location%60%2C%0A%20%20%60%3A%40computed_region_yftq_j783%60%2C%0A%20%20%60%3A%40computed_region_p5aj_wyqh%60%2C%0A%20%20%60%3A%40computed_region_rxqg_mtj9%60%2C%0A%20%20%60%3A%40computed_region_bh8s_q3mv%60%2C%0A%20%20%60%3A%40computed_region_fyvs_ahh9%60'
-              )
-                .then((response) => response.json())
-                .then((data) => {
-                  const distanceThreshold = searchRadius; // Consider food trucks within searchRadius
-                  const closeFoodTrucks = data
-                    .map((foodTruck) => {
-                      const distance = calculateDistance(
-                        userLatitude,
-                        userLongitude,
-                        foodTruck.latitude,
-                        foodTruck.longitude
-                      );
-                      const distanceInMiles = distance * 0.62137119;
-                      return { ...foodTruck, distance: distanceInMiles };
-                    })
-                    .filter((foodTruck) => foodTruck.distance <= distanceThreshold);
-
-                  closeFoodTrucks.sort((a, b) => a.distance - b.distance);
-
-                  if (closeFoodTrucks.length > 0) {
-                    setSearchResults(closeFoodTrucks);
-                    setIsEmptyResults(false);
-                  } else {
-                    setSearchResults([]);
-                    setIsEmptyResults(true);
-                  }
-                })
-                .catch((error) => {
-                  console.error('Error:', error);
-                });
-            } else {
-              setSearchResults([]);
-              setIsEmptyResults(true);
-            }
+                if (closeFoodTrucks.length > 0) {
+                  setSearchResults(closeFoodTrucks);
+                  setIsEmptyResults(false);
+                } else {
+                  setSearchResults([]);
+                  setIsEmptyResults(true);
+                }
+              })
+              .catch((error) => {
+                console.error('Error:', error);
+              });
           } else {
-            console.error('Geocoding request failed');
+            setSearchResults([]);
+            setIsEmptyResults(true);
           }
-        })
-      .catch((error) => {
-        console.error('Error occurred while geocoding:', error);
-      });
-    }, 100);
+        } else {
+          console.error('Geocoding request failed');
+        }
+      })
+    .catch((error) => {
+      console.error('Error occurred while geocoding:', error);
+    });
   };
   
   const handleMarkerClick = (foodTruck) => {
@@ -235,27 +236,23 @@ const App = () => {
         mapStyle="mapbox://styles/mapbox/navigation-night-v1"
         onMove={evt => setViewport(evt.viewport)}
       >
-        <p className='page-title'>Food Truck Finder (San Francisco, California)</p>
-        <div className="search-bar">
-          <input type="text" placeholder="i.e. name, genre, type..." value={searchTerm} onChange={handleSearch}/>
-          <button className="search-button" onClick={handleFormSubmit}>Search</button> {/* Button to search */}
-          <button className="show-all-button" onClick={handleButtonToggle}>Show All</button> {/* Button to show/hide markers */}
-        </div>
-        <form className='search-address-bar' onSubmit={handleFormSubmit}>
-          <input type="text" placeholder="Enter an address..." value={addressInput} onChange={(e) => setAddressInput(e.target.value)}/>
-        </form>
-        <input
-            className='slider'
-            type="range"
-            min={1}
-            max={10}
-            step={0.1}
-            value={searchRadius}
-            onChange={handleSearchRadius}
-        />
-        <p className="miles-text" >within {searchRadius} mile(s)</p>
-
-        {(addressInput || searchTerm) && (
+        <div className='main-ui'>
+          <p className='page-title'>Food Truck Finder (San Francisco, California)</p>
+          <div className='second-search-bar'>
+            <form className='search-address-bar' onSubmit={handleFormSubmit}>
+              <input type="text" placeholder="Enter an address..." value={addressInput} onChange={(e) => setAddressInput(e.target.value)}/>
+            </form>
+            <div className='search-radius'>
+              <p className="miles-text" >within {searchRadius} mile(s)</p>
+              <input className='slider' type="range" min={1} max={10} step={0.1} value={searchRadius} onChange={handleSearchRadius}/>
+            </div>
+          </div>
+          <div className="search-bar">
+            <input type="text" placeholder="i.e. name, genre, type..." value={searchTerm}  onChange={(e) => setSearchTerm(e.target.value)} onSubmit={handleSearch}/>
+            <button className="search-button" onClick={handleFormSubmit}>Search</button> {/* Button to search */}
+            <button className="show-all-button" onClick={handleButtonToggle}>Show All</button> {/* Button to show/hide markers */}
+          </div>
+          {(addressInput || searchTerm) && (
           <div className="search-results">
             {isEmptyResults && <p>No Results</p>}
             {foodTrucks.length > 0 &&
@@ -265,7 +262,6 @@ const App = () => {
                     <h3 className='applicant'>
                       {`${index + 1}. ${foodTruck.applicant}`} 
                       {foodTruck.distance ? ' (' + foodTruck.distance.toFixed(2) + ' miles away)' : ''}
-                      
                     </h3>
                     <p className='address'>{foodTruck.address}</p>
                 </div>
@@ -279,6 +275,10 @@ const App = () => {
             ))}
           </div>
         )}
+        </div>
+       
+        
+
 
         {showMarkers && // Render markers only if showMarkers is true
           searchResults.length > 0 && // Check if foodTrucks array has data
